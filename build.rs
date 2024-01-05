@@ -5,10 +5,8 @@ pub fn main() {
         .generator("Ninja")
         .profile("Release")
         .define("BBL_LANGUAGES", "rust")
-        .very_verbose(true)
-        .env("CMAKE_C_FLAGS", "")
-        .env("CMAKE_CXX_FLAGS", "")
+        .define("CMAKE_PREFIX_PATH", "/home/ashley/projects/babble/install")
         .build();
 
-    println!("cargo:rerun-if-changed=../bbl-usd");
+    println!("cargo:rerun-if-changed=bbl-usd");
 }

@@ -3,4 +3,4 @@
 #![allow(non_snake_case)]
 #![allow(unused)]
 
-include!(concat!(env!("OUT_DIR"), "/build/openusd.rs"));
+include!("auto_gen_bindings.rs");
