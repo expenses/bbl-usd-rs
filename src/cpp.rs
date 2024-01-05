@@ -22,6 +22,10 @@ impl String {
             cstr
         }
     }
+
+    pub fn ptr(&self) -> *const ffi::std_String_t {
+        self.ptr
+    }
 }
 
 pub struct StringRef {

@@ -6,6 +6,10 @@ pub struct ResolvedPath {
 }
 
 impl ResolvedPath {
+    pub fn from_raw(ptr: *const ffi::ar_ResolvedPath_t) -> Self {
+        Self { ptr: ptr as _ }
+    }
+
     pub fn is_empty(&self) -> bool {
         unsafe {
             let mut is_empty = false;
