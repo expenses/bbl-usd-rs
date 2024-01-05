@@ -2,10 +2,18 @@ use crate::ffi;
 use std::ffi::{CStr, CString};
 
 pub struct String {
-    ptr: *mut ffi::std_String_t,
+    pub(crate) ptr: *mut ffi::std_String_t,
 }
 
 impl String {
+    pub fn new(string: &CStr) -> Self {
+        unsafe {
+            let mut ptr = std::ptr::null_mut();
+            ffi::std_String_from_char_ptr(string.as_ptr(), &mut ptr);
+            Self { ptr }
+        }
+    }
+
     pub fn as_str(&self) -> &str {
         unsafe {
             let mut ptr = std::ptr::null();
@@ -35,5 +43,3 @@ impl Drop for String {
         }
     }
 }
-
-

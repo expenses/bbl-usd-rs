@@ -193,3 +193,38 @@ pub enum Variability {
     Varying,
     Uniform,
 }
+
+pub struct LayerHandle {
+    pub(crate) ptr: *mut ffi::sdf_LayerHandle_t,
+}
+
+impl LayerHandle {
+    fn drop(&mut self) {
+        unsafe {
+            ffi::sdf_LayerHandle_dtor(self.ptr);
+        }
+    }
+}
+
+pub struct Schema {
+    pub(crate) ptr: *const ffi::sdf_SdfSchema_t,
+}
+
+impl Schema {
+    pub fn get_instance() -> Self {
+        unsafe {
+            let mut ptr = std::ptr::null();
+            ffi::sdf_SdfSchema_GetInstance(&mut ptr);
+            Self { ptr }
+        }
+    }
+
+    pub fn find_type(&self, name: &str) -> ValueTypeName {
+        let name = tf::Token::new(name);
+        unsafe {
+            let mut ptr = std::ptr::null_mut();
+            ffi::sdf_SdfSchema_FindType_00(self.ptr, name.ptr, &mut ptr);
+            ValueTypeName { ptr }
+        }
+    }
+}

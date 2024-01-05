@@ -9,6 +9,7 @@ use std::path::Path;
 #[derive(Debug)]
 pub enum Error {
     StageOpen { filename: String },
+    StageCreateNew { filename: String },
     NoPrimAtPath { path: String },
 }
 
@@ -32,6 +33,29 @@ impl Stage {
 
             if is_invalid {
                 Err(Error::StageOpen { filename })
+            } else {
+                Ok(StageRefPtr { ptr })
+            }
+        }
+    }
+
+    pub fn create_new<P: AsRef<Path>>(filename: P) -> Result<StageRefPtr, Error> {
+        unsafe {
+            let mut ptr = std::ptr::null_mut();
+            let initial_load_set = ffi::usd_StageInitialLoadSet_usd_StageInitialLoadSet_LoadAll;
+            let filename = filename.as_ref().to_string_lossy().to_string();
+            let c_filename = CString::new(filename.clone()).unwrap();
+            ffi::usd_Stage_CreateNew(
+                c_filename.as_ptr() as *mut std::ffi::c_char,
+                initial_load_set,
+                &mut ptr,
+            );
+
+            let mut is_invalid = true;
+            ffi::usd_StageRefPtr_is_invalid(ptr, &mut is_invalid);
+
+            if is_invalid {
+                Err(Error::StageCreateNew { filename })
             } else {
                 Ok(StageRefPtr { ptr })
             }
@@ -61,10 +85,38 @@ impl StageRefPtr {
             ffi::usd_Prim_IsValid(ptr, &mut valid);
 
             if valid {
-                Ok(Prim{ptr})
+                Ok(Prim { ptr })
             } else {
-                Err(Error::NoPrimAtPath { path: path.text().to_string() })
+                Err(Error::NoPrimAtPath {
+                    path: path.text().to_string(),
+                })
             }
+        }
+    }
+
+    pub fn define_prim<P: Into<sdf::Path>>(&self, path: P, ty: &str) -> Result<Prim, Error> {
+        let path = path.into();
+        let token = tf::Token::new(ty);
+        unsafe {
+            let mut ptr = std::ptr::null_mut();
+            ffi::usd_StageRefPtr_DefinePrim(self.ptr, path.ptr, token.ptr, &mut ptr);
+
+            let mut valid = false;
+            ffi::usd_Prim_IsValid(ptr, &mut valid);
+
+            if valid {
+                Ok(Prim { ptr })
+            } else {
+                Err(Error::NoPrimAtPath {
+                    path: path.text().to_string(),
+                })
+            }
+        }
+    }
+
+    pub fn save(&self) {
+        unsafe {
+            ffi::usd_StageRefPtr_Save(self.ptr);
         }
     }
 }
@@ -123,6 +175,27 @@ impl Prim {
             let mut ptr = std::ptr::null_mut();
             ffi::usd_Prim_GetProperties(self.ptr, &mut ptr);
             PropertyVector { ptr }
+        }
+    }
+
+    pub fn create_attribute(
+        &self,
+        name: &str,
+        type_name: &sdf::ValueTypeName,
+        custom: bool,
+    ) -> Attribute {
+        let name = tf::Token::new(name);
+        unsafe {
+            let mut ptr = std::ptr::null_mut();
+            ffi::usd_Prim_CreateAttribute(
+                self.ptr,
+                name.ptr,
+                type_name.ptr,
+                custom,
+                ffi::sdf_Variability_sdf_Variability_SdfVariabilityVarying,
+                &mut ptr,
+            );
+            Attribute { ptr }
         }
     }
 }
@@ -502,7 +575,6 @@ impl<'a> IntoIterator for &'a PropertyVector {
     }
 }
 
-
 pub struct Attribute {
     ptr: *mut ffi::usd_Attribute_t,
 }
@@ -519,6 +591,14 @@ impl Attribute {
             } else {
                 None
             }
+        }
+    }
+
+    pub fn set(&self, value: &vt::Value) -> bool {
+        unsafe {
+            let mut result = false;
+            ffi::usd_Attribute_Set(self.ptr, value.ptr, TimeCode::default().0, &mut result);
+            result
         }
     }
 
@@ -658,6 +738,43 @@ impl Default for TimeCode {
             let mut tc = ffi::usd_TimeCode_t { time: 0.0 };
             ffi::usd_TimeCode_Default(&mut tc);
             TimeCode(tc)
+        }
+    }
+}
+
+pub struct Mesh {
+    pub(crate) ptr: *mut ffi::usdGeom_Mesh_t,
+}
+
+impl Mesh {
+    pub fn new(prim: &Prim) -> Self {
+        unsafe {
+            let mut ptr = std::ptr::null_mut();
+            ffi::usdGeom_Mesh_new(prim.ptr, &mut ptr);
+            Self { ptr }
+        }
+    }
+}
+
+pub struct Primvar {
+    pub(crate) ptr: *mut ffi::usdGeom_Primvar_t,
+}
+
+impl Primvar {
+    pub fn new(attribute: &Attribute) -> Self {
+        unsafe {
+            let mut ptr = std::ptr::null_mut();
+            ffi::usdGeom_Primvar_new(attribute.ptr, &mut ptr);
+            Self { ptr }
+        }
+    }
+
+    pub fn set_interpolation(&mut self, interpolation: &str) -> bool {
+        let interpolation = tf::Token::new(interpolation);
+        unsafe {
+            let mut result = false;
+            ffi::usdGeom_Primvar_SetInterpolation(self.ptr, interpolation.ptr, &mut result);
+            result
         }
     }
 }

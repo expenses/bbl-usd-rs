@@ -3,502 +3,73 @@ use std::ops::IndexMut;
 use crate::{ffi, sdf, tf};
 use glam::{Vec2, Vec3, Vec4};
 
-pub struct TokenArray {
-    pub(crate) ptr: *mut ffi::vt_TokenArray_t,
-}
+pub struct ArrayRef<T>(T);
 
-impl TokenArray {
-    pub fn size(&self) -> usize {
-        unsafe {
-            let mut result = 0;
-            ffi::vt_TokenArray_size(self.ptr, &mut result);
-            result
-        }
-    }
-
-    pub fn at(&self, index: usize) -> tf::TokenRef {
-        unsafe {
-            let mut ptr = std::ptr::null_mut();
-            ffi::vt_TokenArray_op_index(self.ptr, index, &mut ptr);
-            tf::TokenRef { ptr }
-        }
-    }
-
-    pub fn iter(&self) -> TokenArrayIterator {
-        TokenArrayIterator {
-            vec: self,
-            current: 0,
-            end: self.size(),
-        }
-    }
-}
-
-impl<'a> IntoIterator for &'a TokenArray {
-    type Item = tf::TokenRef;
-    type IntoIter = TokenArrayIterator<'a>;
-
-    fn into_iter(self) -> Self::IntoIter {
-        self.iter()
-    }
-}
-
-pub struct TokenArrayIterator<'a> {
-    vec: &'a TokenArray,
-    current: usize,
-    end: usize,
-}
-
-impl<'a> Iterator for TokenArrayIterator<'a> {
-    type Item = tf::TokenRef;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        if self.current == self.end {
-            None
-        } else {
-            let cur = self.current;
-            self.current += 1;
-            Some(self.vec.at(cur))
-        }
-    }
-}
-
-pub struct TokenArrayRef {
-    pub(crate) ptr: *mut ffi::vt_TokenArray_t,
-}
-
-impl std::ops::Deref for TokenArrayRef {
-    type Target = TokenArray;
+impl<T> std::ops::Deref for ArrayRef<T> {
+    type Target = T;
 
     fn deref(&self) -> &Self::Target {
-        unsafe { &*(self as *const TokenArrayRef as *const TokenArray) }
+        &self.0
     }
 }
 
-pub struct IntArray {
-    pub(crate) ptr: *mut ffi::vt_IntArray_t,
-}
-
-impl IntArray {
-    pub fn size(&self) -> usize {
-        unsafe {
-            let mut result = 0;
-            ffi::vt_IntArray_size(self.ptr, &mut result);
-            result
+macro_rules! create_array_type {
+    ($name:ident, $ptr_type:ty, $inner_ty:ty, $new_fn:expr, $size_fn:expr, $mut_ptr_fn:expr, $resize_fn:expr) => {
+        pub struct $name {
+            pub(crate) ptr: *mut $ptr_type,
         }
-    }
 
-    pub fn at(&self, index: usize) -> &i32 {
-        unsafe {
-            let mut ptr = std::ptr::null_mut();
-            ffi::vt_IntArray_op_index(self.ptr, index, &mut ptr);
-            &*(ptr as *mut i32)
+        impl $name {
+            pub fn new() -> Self {
+                unsafe {
+                    let mut ptr = std::ptr::null_mut();
+                    $new_fn(&mut ptr);
+                    Self { ptr }
+                }
+            }
+
+            pub fn resize(&mut self, num: usize) {
+                unsafe {
+                    $resize_fn(self.ptr, num);
+                }
+            }
         }
-    }
 
-    pub fn iter(&self) -> IntArrayIterator {
-        IntArrayIterator {
-            vec: self,
-            current: 0,
-            end: self.size(),
+        impl std::ops::Deref for $name {
+            type Target = [$inner_ty];
+
+            fn deref(&self) -> &Self::Target {
+                unsafe {
+                    let mut size = 0;
+                    $size_fn(self.ptr, &mut size);
+                    let mut ptr = std::ptr::null_mut();
+                    $mut_ptr_fn(self.ptr, &mut ptr);
+                    std::slice::from_raw_parts(ptr as *const $inner_ty, size)
+                }
+            }
         }
-    }
-}
 
-impl<'a> IntoIterator for &'a IntArray {
-    type Item = &'a i32;
-    type IntoIter = IntArrayIterator<'a>;
-
-    fn into_iter(self) -> Self::IntoIter {
-        self.iter()
-    }
-}
-
-pub struct IntArrayIterator<'a> {
-    vec: &'a IntArray,
-    current: usize,
-    end: usize,
-}
-
-impl<'a> Iterator for IntArrayIterator<'a> {
-    type Item = &'a i32;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        if self.current == self.end {
-            None
-        } else {
-            let cur = self.current;
-            self.current += 1;
-            Some(self.vec.at(cur))
+        impl std::ops::DerefMut for $name {
+            fn deref_mut(&mut self) -> &mut Self::Target {
+                unsafe {
+                    let mut size = 0;
+                    $size_fn(self.ptr, &mut size);
+                    let mut ptr = std::ptr::null_mut();
+                    $mut_ptr_fn(self.ptr, &mut ptr);
+                    std::slice::from_raw_parts_mut(ptr as *mut $inner_ty, size)
+                }
+            }
         }
-    }
+    };
 }
 
-pub struct IntArrayRef {
-    pub(crate) ptr: *mut ffi::vt_IntArray_t,
-}
-
-impl std::ops::Deref for IntArrayRef {
-    type Target = IntArray;
-
-    fn deref(&self) -> &Self::Target {
-        unsafe { &*(self as *const IntArrayRef as *const IntArray) }
-    }
-}
-
-pub struct FloatArray {
-    pub(crate) ptr: *mut ffi::vt_FloatArray_t,
-}
-
-impl FloatArray {
-    pub fn size(&self) -> usize {
-        unsafe {
-            let mut result = 0;
-            ffi::vt_FloatArray_size(self.ptr, &mut result);
-            result
-        }
-    }
-
-    pub fn at(&self, index: usize) -> &f32 {
-        unsafe {
-            let mut ptr = std::ptr::null_mut();
-            ffi::vt_FloatArray_op_index(self.ptr, index, &mut ptr);
-            &*(ptr as *mut f32)
-        }
-    }
-
-    pub fn iter(&self) -> FloatArrayIterator {
-        FloatArrayIterator {
-            vec: self,
-            current: 0,
-            end: self.size(),
-        }
-    }
-}
-
-impl<'a> IntoIterator for &'a FloatArray {
-    type Item = &'a f32;
-    type IntoIter = FloatArrayIterator<'a>;
-
-    fn into_iter(self) -> Self::IntoIter {
-        self.iter()
-    }
-}
-
-pub struct FloatArrayIterator<'a> {
-    vec: &'a FloatArray,
-    current: usize,
-    end: usize,
-}
-
-impl<'a> Iterator for FloatArrayIterator<'a> {
-    type Item = &'a f32;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        if self.current == self.end {
-            None
-        } else {
-            let cur = self.current;
-            self.current += 1;
-            Some(self.vec.at(cur))
-        }
-    }
-}
-
-pub struct FloatArrayRef {
-    pub(crate) ptr: *mut ffi::vt_FloatArray_t,
-}
-
-impl std::ops::Deref for FloatArrayRef {
-    type Target = FloatArray;
-
-    fn deref(&self) -> &Self::Target {
-        unsafe { &*(self as *const FloatArrayRef as *const FloatArray) }
-    }
-}
-
-pub struct DoubleArray {
-    pub(crate) ptr: *mut ffi::vt_DoubleArray_t,
-}
-
-impl DoubleArray {
-    pub fn size(&self) -> usize {
-        unsafe {
-            let mut result = 0;
-            ffi::vt_DoubleArray_size(self.ptr, &mut result);
-            result
-        }
-    }
-
-    pub fn at(&self, index: usize) -> &f32 {
-        unsafe {
-            let mut ptr = std::ptr::null_mut();
-            ffi::vt_DoubleArray_op_index(self.ptr, index, &mut ptr);
-            &*(ptr as *mut f32)
-        }
-    }
-
-    pub fn iter(&self) -> DoubleArrayIterator {
-        DoubleArrayIterator {
-            vec: self,
-            current: 0,
-            end: self.size(),
-        }
-    }
-}
-
-impl<'a> IntoIterator for &'a DoubleArray {
-    type Item = &'a f32;
-    type IntoIter = DoubleArrayIterator<'a>;
-
-    fn into_iter(self) -> Self::IntoIter {
-        self.iter()
-    }
-}
-
-pub struct DoubleArrayIterator<'a> {
-    vec: &'a DoubleArray,
-    current: usize,
-    end: usize,
-}
-
-impl<'a> Iterator for DoubleArrayIterator<'a> {
-    type Item = &'a f32;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        if self.current == self.end {
-            None
-        } else {
-            let cur = self.current;
-            self.current += 1;
-            Some(self.vec.at(cur))
-        }
-    }
-}
-
-pub struct DoubleArrayRef {
-    pub(crate) ptr: *mut ffi::vt_DoubleArray_t,
-}
-
-impl std::ops::Deref for DoubleArrayRef {
-    type Target = DoubleArray;
-
-    fn deref(&self) -> &Self::Target {
-        unsafe { &*(self as *const DoubleArrayRef as *const DoubleArray) }
-    }
-}
-
-pub struct Vec2Array {
-    pub(crate) ptr: *mut ffi::gf_Vec2fArray_t,
-}
-
-impl Vec2Array {
-    pub fn size(&self) -> usize {
-        unsafe {
-            let mut result = 0;
-            ffi::gf_Vec2fArray_size(self.ptr, &mut result);
-            result
-        }
-    }
-
-    pub fn at(&self, index: usize) -> &Vec2 {
-        unsafe {
-            let mut ptr = std::ptr::null_mut();
-            ffi::gf_Vec2fArray_op_index(self.ptr, index, &mut ptr);
-            &*(ptr as *mut Vec2)
-        }
-    }
-
-    pub fn iter(&self) -> Vec2ArrayIterator {
-        Vec2ArrayIterator {
-            vec: self,
-            current: 0,
-            end: self.size(),
-        }
-    }
-}
-
-impl<'a> IntoIterator for &'a Vec2Array {
-    type Item = &'a Vec2;
-    type IntoIter = Vec2ArrayIterator<'a>;
-
-    fn into_iter(self) -> Self::IntoIter {
-        self.iter()
-    }
-}
-
-pub struct Vec2ArrayIterator<'a> {
-    vec: &'a Vec2Array,
-    current: usize,
-    end: usize,
-}
-
-impl<'a> Iterator for Vec2ArrayIterator<'a> {
-    type Item = &'a Vec2;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        if self.current == self.end {
-            None
-        } else {
-            let cur = self.current;
-            self.current += 1;
-            Some(self.vec.at(cur))
-        }
-    }
-}
-
-pub struct Vec2ArrayRef {
-    pub(crate) ptr: *mut ffi::gf_Vec2fArray_t,
-}
-
-impl std::ops::Deref for Vec2ArrayRef {
-    type Target = Vec2Array;
-
-    fn deref(&self) -> &Self::Target {
-        unsafe { &*(self as *const Vec2ArrayRef as *const Vec2Array) }
-    }
-}
-
-pub struct Vec3Array {
-    pub(crate) ptr: *mut ffi::gf_Vec3fArray_t,
-}
-
-impl Vec3Array {
-    pub fn size(&self) -> usize {
-        unsafe {
-            let mut result = 0;
-            ffi::gf_Vec3fArray_size(self.ptr, &mut result);
-            result
-        }
-    }
-
-    pub fn at(&self, index: usize) -> &Vec3 {
-        unsafe {
-            let mut ptr = std::ptr::null_mut();
-            ffi::gf_Vec3fArray_op_index(self.ptr, index, &mut ptr);
-            &*(ptr as *mut Vec3)
-        }
-    }
-
-    pub fn iter(&self) -> Vec3ArrayIterator {
-        Vec3ArrayIterator {
-            vec: self,
-            current: 0,
-            end: self.size(),
-        }
-    }
-}
-
-impl<'a> IntoIterator for &'a Vec3Array {
-    type Item = &'a Vec3;
-    type IntoIter = Vec3ArrayIterator<'a>;
-
-    fn into_iter(self) -> Self::IntoIter {
-        self.iter()
-    }
-}
-
-pub struct Vec3ArrayIterator<'a> {
-    vec: &'a Vec3Array,
-    current: usize,
-    end: usize,
-}
-
-impl<'a> Iterator for Vec3ArrayIterator<'a> {
-    type Item = &'a Vec3;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        if self.current == self.end {
-            None
-        } else {
-            let cur = self.current;
-            self.current += 1;
-            Some(self.vec.at(cur))
-        }
-    }
-}
-
-pub struct Vec3ArrayRef {
-    pub(crate) ptr: *mut ffi::gf_Vec3fArray_t,
-}
-
-impl std::ops::Deref for Vec3ArrayRef {
-    type Target = Vec3Array;
-
-    fn deref(&self) -> &Self::Target {
-        unsafe { &*(self as *const Vec3ArrayRef as *const Vec3Array) }
-    }
-}
-
-pub struct Vec4Array {
-    pub(crate) ptr: *mut ffi::gf_Vec4fArray_t,
-}
-
-impl Vec4Array {
-    pub fn size(&self) -> usize {
-        unsafe {
-            let mut result = 0;
-            ffi::gf_Vec4fArray_size(self.ptr, &mut result);
-            result
-        }
-    }
-
-    pub fn at(&self, index: usize) -> &Vec4 {
-        unsafe {
-            let mut ptr = std::ptr::null_mut();
-            ffi::gf_Vec4fArray_op_index(self.ptr, index, &mut ptr);
-            &*(ptr as *mut Vec4)
-        }
-    }
-
-    pub fn iter(&self) -> Vec4ArrayIterator {
-        Vec4ArrayIterator {
-            vec: self,
-            current: 0,
-            end: self.size(),
-        }
-    }
-}
-
-impl<'a> IntoIterator for &'a Vec4Array {
-    type Item = &'a Vec4;
-    type IntoIter = Vec4ArrayIterator<'a>;
-
-    fn into_iter(self) -> Self::IntoIter {
-        self.iter()
-    }
-}
-
-pub struct Vec4ArrayIterator<'a> {
-    vec: &'a Vec4Array,
-    current: usize,
-    end: usize,
-}
-
-impl<'a> Iterator for Vec4ArrayIterator<'a> {
-    type Item = &'a Vec4;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        if self.current == self.end {
-            None
-        } else {
-            let cur = self.current;
-            self.current += 1;
-            Some(self.vec.at(cur))
-        }
-    }
-}
-
-pub struct Vec4ArrayRef {
-    pub(crate) ptr: *mut ffi::gf_Vec4fArray_t,
-}
-
-impl std::ops::Deref for Vec4ArrayRef {
-    type Target = Vec4Array;
-
-    fn deref(&self) -> &Self::Target {
-        unsafe { &*(self as *const Vec4ArrayRef as *const Vec4Array) }
-    }
-}
+create_array_type! {Vec2Array, ffi::gf_Vec2fArray_t, Vec2, ffi::gf_Vec2fArray_new, ffi::gf_Vec2fArray_size, ffi::gf_Vec2fArray_data, ffi::gf_Vec2fArray_resize}
+create_array_type! {Vec3Array, ffi::gf_Vec3fArray_t, Vec3, ffi::gf_Vec3fArray_new, ffi::gf_Vec3fArray_size, ffi::gf_Vec3fArray_data, ffi::gf_Vec3fArray_resize}
+create_array_type! {Vec4Array, ffi::gf_Vec4fArray_t, Vec4, ffi::gf_Vec4fArray_new, ffi::gf_Vec4fArray_size, ffi::gf_Vec4fArray_data, ffi::gf_Vec4fArray_resize}
+create_array_type! {IntArray, ffi::vt_IntArray_t, i32, ffi::vt_IntArray_new, ffi::vt_IntArray_size, ffi::vt_IntArray_data, ffi::vt_IntArray_resize}
+create_array_type! {FloatArray, ffi::vt_FloatArray_t, f32, ffi::vt_FloatArray_new, ffi::vt_FloatArray_size, ffi::vt_FloatArray_data, ffi::vt_FloatArray_resize}
+create_array_type! {DoubleArray, ffi::vt_DoubleArray_t, f64, ffi::vt_DoubleArray_new, ffi::vt_DoubleArray_size, ffi::vt_DoubleArray_data, ffi::vt_DoubleArray_resize}
+create_array_type! {TokenArray, ffi::vt_TokenArray_t, tf::TokenRef, ffi::vt_TokenArray_new, ffi::vt_TokenArray_size, ffi::vt_TokenArray_data, ffi::vt_TokenArray_resize}
 
 pub struct Value {
     pub(crate) ptr: *mut ffi::vt_Value_t,
@@ -525,99 +96,98 @@ impl Value {
         }
     }
 
-    pub fn as_token_array(&self) -> Option<TokenArrayRef> {
+    pub fn as_token_array(&self) -> Option<ArrayRef<TokenArray>> {
         unsafe {
             let mut is_holding = false;
             ffi::vt_Value_IsHolding_VtTokenArray(self.ptr, &mut is_holding);
             if is_holding {
                 let mut ptr = std::ptr::null();
                 ffi::vt_Value_Get_VtTokenArray(self.ptr, &mut ptr);
-                Some(TokenArrayRef { ptr: ptr as _ })
+                Some(ArrayRef(TokenArray { ptr: ptr as _ }))
             } else {
                 None
             }
         }
     }
 
-    pub fn as_int_array(&self) -> Option<IntArrayRef> {
+    pub fn as_int_array(&self) -> Option<ArrayRef<IntArray>> {
         unsafe {
             let mut is_holding = false;
             ffi::vt_Value_IsHolding_VtIntArray(self.ptr, &mut is_holding);
             if is_holding {
                 let mut ptr = std::ptr::null();
                 ffi::vt_Value_Get_VtIntArray(self.ptr, &mut ptr);
-                Some(IntArrayRef { ptr: ptr as _ })
+                Some(ArrayRef(IntArray { ptr: ptr as _ }))
             } else {
                 None
             }
         }
     }
 
-
-    pub fn as_float_array(&self) -> Option<FloatArrayRef> {
+    pub fn as_float_array(&self) -> Option<ArrayRef<FloatArray>> {
         unsafe {
             let mut is_holding = false;
             ffi::vt_Value_IsHolding_VtFloatArray(self.ptr, &mut is_holding);
             if is_holding {
                 let mut ptr = std::ptr::null();
                 ffi::vt_Value_Get_VtFloatArray(self.ptr, &mut ptr);
-                Some(FloatArrayRef { ptr: ptr as _ })
+                Some(ArrayRef(FloatArray { ptr: ptr as _ }))
             } else {
                 None
             }
         }
     }
 
-    pub fn as_double_array(&self) -> Option<DoubleArrayRef> {
+    pub fn as_double_array(&self) -> Option<ArrayRef<DoubleArray>> {
         unsafe {
             let mut is_holding = false;
             ffi::vt_Value_IsHolding_VtDoubleArray(self.ptr, &mut is_holding);
             if is_holding {
                 let mut ptr = std::ptr::null();
                 ffi::vt_Value_Get_VtDoubleArray(self.ptr, &mut ptr);
-                Some(DoubleArrayRef { ptr: ptr as _ })
+                Some(ArrayRef(DoubleArray { ptr: ptr as _ }))
             } else {
                 None
             }
         }
     }
 
-    pub fn as_vec2_array(&self) -> Option<Vec2ArrayRef> {
+    pub fn as_vec2_array(&self) -> Option<ArrayRef<Vec2Array>> {
         unsafe {
             let mut is_holding = false;
             ffi::vt_Value_IsHolding_VtVec2fArray(self.ptr, &mut is_holding);
             if is_holding {
                 let mut ptr = std::ptr::null();
                 ffi::vt_Value_Get_VtVec2fArray(self.ptr, &mut ptr);
-                Some(Vec2ArrayRef { ptr: ptr as _ })
+                Some(ArrayRef(Vec2Array { ptr: ptr as _ }))
             } else {
                 None
             }
         }
     }
 
-    pub fn as_vec3_array(&self) -> Option<Vec3ArrayRef> {
+    pub fn as_vec3_array(&self) -> Option<ArrayRef<Vec3Array>> {
         unsafe {
             let mut is_holding = false;
             ffi::vt_Value_IsHolding_VtVec3fArray(self.ptr, &mut is_holding);
             if is_holding {
                 let mut ptr = std::ptr::null();
                 ffi::vt_Value_Get_VtVec3fArray(self.ptr, &mut ptr);
-                Some(Vec3ArrayRef { ptr: ptr as _ })
+                Some(ArrayRef(Vec3Array { ptr: ptr as _ }))
             } else {
                 None
             }
         }
     }
 
-    pub fn as_vec4_array(&self) -> Option<Vec4ArrayRef> {
+    pub fn as_vec4_array(&self) -> Option<ArrayRef<Vec4Array>> {
         unsafe {
             let mut is_holding = false;
             ffi::vt_Value_IsHolding_VtVec4fArray(self.ptr, &mut is_holding);
             if is_holding {
                 let mut ptr = std::ptr::null();
                 ffi::vt_Value_Get_VtVec4fArray(self.ptr, &mut ptr);
-                Some(Vec4ArrayRef { ptr: ptr as _ })
+                Some(ArrayRef(Vec4Array { ptr: ptr as _ }))
             } else {
                 None
             }
@@ -635,6 +205,22 @@ impl Value {
             } else {
                 None
             }
+        }
+    }
+
+    pub fn from_int_array(member: &IntArray) -> Value {
+        unsafe {
+            let mut ptr = std::ptr::null_mut();
+            ffi::vt_Value_from_VtIntArray(member.ptr, &mut ptr);
+            Value { ptr }
+        }
+    }
+
+    pub fn from_vec3_array(member: &Vec3Array) -> Value {
+        unsafe {
+            let mut ptr = std::ptr::null_mut();
+            ffi::vt_Value_from_VtVec3fArray(member.ptr, &mut ptr);
+            Value { ptr }
         }
     }
 }
