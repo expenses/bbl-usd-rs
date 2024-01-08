@@ -2,6 +2,7 @@ use paste::paste;
 use std::ops::IndexMut;
 
 use crate::{ffi, sdf, tf};
+use ffi::*;
 use glam::{Vec2, Vec3, Vec4};
 
 pub struct TokenArray {
@@ -9,7 +10,7 @@ pub struct TokenArray {
 }
 
 impl TokenArray {
-    pub fn size(&self) -> usize {
+    pub fn len(&self) -> usize {
         unsafe {
             let mut result = 0;
             ffi::vt_TokenArray_size(self.ptr, &mut result);
@@ -29,7 +30,7 @@ impl TokenArray {
         TokenArrayIterator {
             vec: self,
             current: 0,
-            end: self.size(),
+            end: self.len(),
         }
     }
 }
@@ -74,8 +75,6 @@ impl std::ops::Deref for TokenArrayRef {
         unsafe { &*(self as *const TokenArrayRef as *const TokenArray) }
     }
 }
-
-use ffi::*;
 
 macro_rules! make_primitive_array {
     ($prefix:ident, $name:ident, $c_name:ident, $inner_type:ty) => {
@@ -289,221 +288,85 @@ pub trait ValueMember {
     fn from(member: &Self) -> Value;
 }
 
-impl ValueMember for i32 {
-    fn get(value: &Value) -> Option<&Self> {
-        if Self::is_holding(value) {
-            unsafe {
-                let mut ptr = std::ptr::null();
-                ffi::vt_Value_Get_int(value.ptr, &mut ptr);
-                Some(&*ptr)
+macro_rules! impl_value_member {
+    ($type:ty, $c_type:ident) => {
+        paste! {
+            impl ValueMember for $type {
+                fn get(value: &Value) -> Option<&Self> {
+                    if Self::is_holding(value) {
+                        unsafe {
+                            let mut ptr = std::ptr::null();
+                            [<vt_Value_Get_ $c_type>](value.ptr, &mut ptr);
+                            Some(&*ptr)
+                        }
+                    } else {
+                        None
+                    }
+                }
+
+                fn is_holding(value: &Value) -> bool {
+                    unsafe {
+                        let mut result = false;
+                        [<vt_Value_IsHolding_ $c_type>](value.ptr, &mut result);
+                        result
+                    }
+                }
+
+                fn from(member: &Self) -> Value {
+                    unsafe {
+                        let mut ptr = std::ptr::null_mut();
+                        [<vt_Value_from_ $c_type>](*member, &mut ptr);
+                        Value { ptr }
+                    }
+                }
             }
-        } else {
-            None
         }
-    }
-
-    fn is_holding(value: &Value) -> bool {
-        unsafe {
-            let mut result = false;
-            ffi::vt_Value_IsHolding_int(value.ptr, &mut result);
-            result
-        }
-    }
-
-    fn from(member: &Self) -> Value {
-        unsafe {
-            let mut ptr = std::ptr::null_mut();
-            ffi::vt_Value_from_int(*member, &mut ptr);
-            Value { ptr }
-        }
-    }
+    };
 }
 
-impl ValueMember for f32 {
-    fn get(value: &Value) -> Option<&Self> {
-        if Self::is_holding(value) {
-            unsafe {
-                let mut ptr = std::ptr::null();
-                ffi::vt_Value_Get_float(value.ptr, &mut ptr);
-                Some(&*ptr)
+impl_value_member!(i32, int);
+impl_value_member!(f32, float);
+impl_value_member!(f64, double);
+impl_value_member!(bool, bool);
+
+macro_rules! impl_value_member_for_vec {
+    ($type:ty) => {
+        paste! {
+            impl ValueMember for $type {
+                fn get(value: &Value) -> Option<&Self> {
+                    if Self::is_holding(value) {
+                        unsafe {
+                            let mut ptr = std::ptr::null();
+                            [<vt_Value_Get_Gf $type f>](value.ptr, &mut ptr);
+                            Some(&*(ptr as *mut $type))
+                        }
+                    } else {
+                        None
+                    }
+                }
+
+                fn is_holding(value: &Value) -> bool {
+                    unsafe {
+                        let mut result = false;
+                        [<vt_Value_IsHolding_Gf $type f>](value.ptr, &mut result);
+                        result
+                    }
+                }
+
+                fn from(member: &Self) -> Value {
+                    unsafe {
+                        let mut ptr = std::ptr::null_mut();
+                        [<vt_Value_from_Gf $type f>](
+                            *(member as *const $type as *const [<gf_ $type f_t>]),
+                            &mut ptr);
+                        Value { ptr }
+                    }
+                }
             }
-        } else {
-            None
         }
-    }
-
-    fn is_holding(value: &Value) -> bool {
-        unsafe {
-            let mut result = false;
-            ffi::vt_Value_IsHolding_float(value.ptr, &mut result);
-            result
-        }
-    }
-
-    fn from(member: &Self) -> Value {
-        unsafe {
-            let mut ptr = std::ptr::null_mut();
-            ffi::vt_Value_from_float(*member, &mut ptr);
-            Value { ptr }
-        }
-    }
+    };
 }
 
-impl ValueMember for f64 {
-    fn get(value: &Value) -> Option<&Self> {
-        if Self::is_holding(value) {
-            unsafe {
-                let mut ptr = std::ptr::null();
-                ffi::vt_Value_Get_double(value.ptr, &mut ptr);
-                Some(&*ptr)
-            }
-        } else {
-            None
-        }
-    }
-
-    fn is_holding(value: &Value) -> bool {
-        unsafe {
-            let mut result = false;
-            ffi::vt_Value_IsHolding_double(value.ptr, &mut result);
-            result
-        }
-    }
-
-    fn from(member: &Self) -> Value {
-        unsafe {
-            let mut ptr = std::ptr::null_mut();
-            ffi::vt_Value_from_double(*member, &mut ptr);
-            Value { ptr }
-        }
-    }
-}
-
-impl ValueMember for bool {
-    fn get(value: &Value) -> Option<&Self> {
-        if Self::is_holding(value) {
-            unsafe {
-                let mut ptr = std::ptr::null();
-                ffi::vt_Value_Get_bool(value.ptr, &mut ptr);
-                Some(&*ptr)
-            }
-        } else {
-            None
-        }
-    }
-
-    fn is_holding(value: &Value) -> bool {
-        unsafe {
-            let mut result = false;
-            ffi::vt_Value_IsHolding_bool(value.ptr, &mut result);
-            result
-        }
-    }
-
-    fn from(member: &Self) -> Value {
-        unsafe {
-            let mut ptr = std::ptr::null_mut();
-            ffi::vt_Value_from_bool(*member, &mut ptr);
-            Value { ptr }
-        }
-    }
-}
-
-impl ValueMember for Vec2 {
-    fn get(value: &Value) -> Option<&Self> {
-        if Self::is_holding(value) {
-            unsafe {
-                let mut ptr = std::ptr::null();
-                ffi::vt_Value_Get_GfVec2f(value.ptr, &mut ptr);
-                Some(&*(ptr as *mut Vec2))
-            }
-        } else {
-            None
-        }
-    }
-
-    fn is_holding(value: &Value) -> bool {
-        unsafe {
-            let mut result = false;
-            ffi::vt_Value_IsHolding_GfVec2f(value.ptr, &mut result);
-            result
-        }
-    }
-
-    fn from(member: &Self) -> Value {
-        unsafe {
-            let mut ptr = std::ptr::null_mut();
-            ffi::vt_Value_from_GfVec2f(
-                *(member as *const Vec2 as *const ffi::gf_Vec2f_t),
-                &mut ptr,
-            );
-            Value { ptr }
-        }
-    }
-}
-
-impl ValueMember for Vec3 {
-    fn get(value: &Value) -> Option<&Self> {
-        if Self::is_holding(value) {
-            unsafe {
-                let mut ptr = std::ptr::null();
-                ffi::vt_Value_Get_GfVec3f(value.ptr, &mut ptr);
-                Some(&*(ptr as *mut Vec3))
-            }
-        } else {
-            None
-        }
-    }
-
-    fn is_holding(value: &Value) -> bool {
-        unsafe {
-            let mut result = false;
-            ffi::vt_Value_IsHolding_GfVec3f(value.ptr, &mut result);
-            result
-        }
-    }
-
-    fn from(member: &Self) -> Value {
-        unsafe {
-            let mut ptr = std::ptr::null_mut();
-            ffi::vt_Value_from_GfVec3f(
-                *(member as *const Vec3 as *const ffi::gf_Vec3f_t),
-                &mut ptr,
-            );
-            Value { ptr }
-        }
-    }
-}
-
-impl ValueMember for Vec4 {
-    fn get(value: &Value) -> Option<&Self> {
-        if Self::is_holding(value) {
-            unsafe {
-                let mut ptr = std::ptr::null();
-                ffi::vt_Value_Get_GfVec4f(value.ptr, &mut ptr);
-                Some(&*(ptr as *mut Vec4))
-            }
-        } else {
-            None
-        }
-    }
-
-    fn is_holding(value: &Value) -> bool {
-        unsafe {
-            let mut result = false;
-            ffi::vt_Value_IsHolding_GfVec4f(value.ptr, &mut result);
-            result
-        }
-    }
-
-    fn from(member: &Self) -> Value {
-        unsafe {
-            let mut ptr = std::ptr::null_mut();
-            ffi::vt_Value_from_GfVec4f(
-                *(member as *const Vec4 as *const ffi::gf_Vec4f_t),
-                &mut ptr,
-            );
-            Value { ptr }
-        }
-    }
-}
+impl_value_member_for_vec!(Vec2);
+impl_value_member_for_vec!(Vec3);
+impl_value_member_for_vec!(Vec4);
