@@ -32,6 +32,14 @@ pub struct StringRef {
     pub(crate) ptr: *mut ffi::std_String_t,
 }
 
+impl StringRef {
+    pub fn from_ptr(ptr: *const ffi::std_String_t) -> Self {
+        Self {
+            ptr: ptr as _
+        }
+    }
+}
+
 impl std::ops::Deref for StringRef {
     type Target = String;
 
