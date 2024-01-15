@@ -2,7 +2,7 @@ use paste::paste;
 use std::ops::IndexMut;
 
 use crate::{ffi, sdf, tf};
-use glam::{DVec3, Vec2, Vec3, Vec4};
+use glam::{Vec2, Vec3, Vec4, DVec3};
 
 pub struct TokenArray {
     pub(crate) ptr: *mut ffi::vt_TokenArray_t,
