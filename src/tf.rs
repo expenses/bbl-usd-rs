@@ -7,7 +7,7 @@ pub struct Token {
 }
 
 impl Token {
-pub fn new(name: &str) -> Self {
+    pub fn new(name: &str) -> Self {
         let c_name = CString::new(name).unwrap();
         unsafe {
             let mut ptr = std::ptr::null_mut();
@@ -112,25 +112,40 @@ impl Type {
 
     pub fn set_factory(
         &self,
-        create_identifier_for_new_asset: CreateIdentifierFn,
-        create_identifier: CreateIdentifierFn,
-        open_asset: OpenAssetFn,
-        resolve_for_new_asset: ResolveFn,
-        resolve: ResolveFn,
+        create_identifier_for_new_asset: Option<CreateIdentifierFn>,
+        create_identifier: Option<CreateIdentifierFn>,
+        open_asset: Option<OpenAssetFn>,
+        resolve_for_new_asset: Option<ResolveFn>,
+        resolve: Option<ResolveFn>,
         get_extension: Option<GetExtensionFn>,
         get_timestamp: Option<GetModificationTimestampFn>,
-        close_writable_asset: CloseWritableAssetFn,
-        open_writable_asset: OpenWritableAssetFn,
-        write_writable_asset: WriteWritableAssetFn,
+        close_writable_asset: Option<CloseWritableAssetFn>,
+        open_writable_asset: Option<OpenWritableAssetFn>,
+        write_writable_asset: Option<WriteWritableAssetFn>,
     ) {
         unsafe {
             ffi::ar_set_ar_resolver_factory(
                 self.ptr,
-                create_identifier_for_new_asset as _,
-                create_identifier as _,
-                open_asset as _,
-                resolve as _,
-                resolve_for_new_asset as _,
+                match create_identifier_for_new_asset {
+                    Some(ptr) => ptr as _,
+                    None => std::ptr::null_mut(),
+                },
+                match create_identifier {
+                    Some(ptr) => ptr as _,
+                    None => std::ptr::null_mut(),
+                },
+                match open_asset {
+                    Some(ptr) => ptr as _,
+                    None => std::ptr::null_mut(),
+                },
+                match resolve {
+                    Some(ptr) => ptr as _,
+                    None => std::ptr::null_mut(),
+                },
+                match resolve_for_new_asset {
+                    Some(ptr) => ptr as _,
+                    None => std::ptr::null_mut(),
+                },
                 std::ptr::null_mut(),
                 match get_extension {
                     Some(ptr) => ptr as _,
@@ -140,9 +155,18 @@ impl Type {
                     Some(ptr) => ptr as _,
                     None => std::ptr::null_mut(),
                 },
-                close_writable_asset as _,
-                open_writable_asset as _,
-                write_writable_asset as _,
+                match close_writable_asset {
+                    Some(ptr) => ptr as _,
+                    None => std::ptr::null_mut(),
+                },
+                match open_writable_asset {
+                    Some(ptr) => ptr as _,
+                    None => std::ptr::null_mut(),
+                },
+                match write_writable_asset {
+                    Some(ptr) => ptr as _,
+                    None => std::ptr::null_mut(),
+                },
             );
         }
     }
