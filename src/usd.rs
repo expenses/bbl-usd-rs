@@ -18,7 +18,7 @@ impl Stage {
     pub fn open<P: AsRef<Path>>(filename: P) -> Result<StageRefPtr, Error> {
         unsafe {
             let mut ptr = std::ptr::null_mut();
-            let initial_load_set = ffi::usd_StageInitialLoadSet::usd_StageInitialLoadSet_LoadAll;
+            let initial_load_set = ffi::usd_StageInitialLoadSet_usd_StageInitialLoadSet_LoadAll;
             let filename = filename.as_ref().to_string_lossy().to_string();
             let c_filename = CString::new(filename.clone()).unwrap();
             ffi::usd_Stage_Open(
@@ -62,10 +62,18 @@ impl StageRefPtr {
             ffi::usd_Prim_IsValid(ptr, &mut valid);
 
             if valid {
-                Ok(Prim{ptr})
+                Ok(Prim { ptr })
             } else {
-                Err(Error::NoPrimAtPath { path: path.text().to_string() })
+                Err(Error::NoPrimAtPath {
+                    path: path.text().to_string(),
+                })
             }
+        }
+    }
+
+    pub fn save(&self) {
+        unsafe {
+            ffi::usd_StageRefPtr_Save(self.ptr);
         }
     }
 }
@@ -93,9 +101,9 @@ pub trait Object {
 
     fn name(&self) -> tf::TokenRef {
         unsafe {
-            let mut ptr = std::ptr::null_mut();
+            let mut ptr = std::ptr::null();
             ffi::usd_Object_GetName(self._object_ptr(), &mut ptr);
-            tf::TokenRef { ptr }
+            tf::TokenRef { ptr: ptr as _ }
         }
     }
 
@@ -103,7 +111,7 @@ pub trait Object {
         unsafe {
             let mut ptr = std::ptr::null_mut();
             ffi::usd_Object_GetDisplayName(self._object_ptr(), &mut ptr);
-            let mut ptr_c_str = std::ptr::null_mut();
+            let mut ptr_c_str = std::ptr::null();
             ffi::std_String_c_str(ptr, &mut ptr_c_str);
             let result = CStr::from_ptr(ptr_c_str).to_string_lossy().to_string();
             ffi::std_String_dtor(ptr);
@@ -120,9 +128,9 @@ pub struct Prim {
 impl Prim {
     pub fn type_name(&self) -> tf::TokenRef {
         unsafe {
-            let mut ptr = std::ptr::null_mut();
+            let mut ptr = std::ptr::null();
             ffi::usd_Prim_GetTypeName(self.ptr, &mut ptr);
-            tf::TokenRef { ptr }
+            tf::TokenRef { ptr: ptr as _ }
         }
     }
 
@@ -398,9 +406,9 @@ pub trait PropertyEx {
             ffi::std_StringVector_size(ptr, &mut size);
             let mut result: Vec<String> = Vec::new();
             for i in 0..size {
-                let mut ptr_str = std::ptr::null_mut();
+                let mut ptr_str = std::ptr::null();
                 ffi::std_StringVector_op_index(ptr, i, &mut ptr_str);
-                let mut ptr_c_str = std::ptr::null_mut();
+                let mut ptr_c_str = std::ptr::null();
                 ffi::std_String_c_str(ptr_str, &mut ptr_c_str);
                 result.push(CStr::from_ptr(ptr_c_str).to_string_lossy().to_string());
             }
@@ -415,7 +423,7 @@ pub trait PropertyEx {
         unsafe {
             let mut ptr = std::ptr::null_mut();
             ffi::usd_Property_GetDisplayGroup(self._property_ptr(), &mut ptr);
-            let mut ptr_c_str = std::ptr::null_mut();
+            let mut ptr_c_str = std::ptr::null();
             ffi::std_String_c_str(ptr, &mut ptr_c_str);
             let result = CStr::from_ptr(ptr_c_str).to_string_lossy().to_string();
             ffi::std_String_dtor(ptr);
@@ -500,9 +508,9 @@ impl PropertyVector {
 
     pub fn at(&self, index: usize) -> PropertyRef {
         unsafe {
-            let mut ptr = std::ptr::null_mut();
+            let mut ptr = std::ptr::null();
             ffi::usd_PropertyVector_op_index(self.ptr, index, &mut ptr);
-            PropertyRef { ptr }
+            PropertyRef { ptr: ptr as _ }
         }
     }
 
@@ -552,7 +560,6 @@ impl<'a> IntoIterator for &'a PropertyVector {
     }
 }
 
-
 pub struct Attribute {
     ptr: *mut ffi::usd_Attribute_t,
 }
@@ -591,6 +598,14 @@ impl Attribute {
             let mut ptr = std::ptr::null_mut();
             ffi::usd_Attribute_GetTypeName(self.ptr, &mut ptr);
             sdf::ValueTypeName { ptr }
+        }
+    }
+
+    pub fn set(&mut self, value: &vt::Value) -> bool {
+        unsafe {
+            let mut result = false;
+            ffi::usd_Attribute_Set(self.ptr, value.ptr, TimeCode::default().0, &mut result);
+            result
         }
     }
 }

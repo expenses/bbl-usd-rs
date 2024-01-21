@@ -1,5 +1,5 @@
-use crate::ffi;
-use std::ffi::{CStr, CString};
+use crate::{cpp, ffi};
+use std::ffi::{c_void, CStr, CString};
 use std::fmt;
 
 pub struct Token {
@@ -9,7 +9,7 @@ pub struct Token {
 impl Token {
     pub fn text(&self) -> &'static str {
         unsafe {
-            let mut ptr = std::ptr::null_mut();
+            let mut ptr = std::ptr::null();
             ffi::tf_Token_GetText(self.ptr, &mut ptr);
             CStr::from_ptr(ptr).to_str().unwrap()
         }
@@ -59,4 +59,3 @@ impl AsRef<str> for TokenRef {
         self.text()
     }
 }
-
