@@ -77,7 +77,6 @@ impl Stage {
     }
 }
 
-#[derive(Debug)]
 pub struct StageRefPtr {
     ptr: *mut ffi::usd_StageRefPtr_t,
 }
@@ -164,6 +163,7 @@ impl Drop for StageRefPtr {
 }
 
 unsafe impl Send for StageRefPtr {}
+unsafe impl Sync for StageRefPtr {}
 
 pub trait Object {
     fn _object_ptr(&self) -> *mut ffi::usd_Object_t;
@@ -224,6 +224,16 @@ impl Prim {
             let mut ptr = std::ptr::null_mut();
             ffi::usd_Prim_GetProperties(self.ptr, &mut ptr);
             PropertyVector { ptr }
+        }
+    }
+
+    pub fn get_references(&self) -> References {
+        unsafe {
+            let mut ptr = std::ptr::null_mut();
+            ffi::usd_Prim_GetReferences(self.ptr, &mut ptr);
+            References {
+                ptr
+            }
         }
     }
 
@@ -821,6 +831,167 @@ impl Default for TimeCode {
             let mut tc = ffi::usd_TimeCode_t { time: 0.0 };
             ffi::usd_TimeCode_Default(&mut tc);
             TimeCode(tc)
+        }
+    }
+}
+
+pub struct Mesh {
+    pub(crate) ptr: *mut ffi::usdGeom_Mesh_t,
+}
+
+impl Mesh {
+    pub fn new(prim: &Prim) -> Self {
+        unsafe {
+            let mut ptr = std::ptr::null_mut();
+            ffi::usdGeom_Mesh_new(prim.ptr, &mut ptr);
+            Self { ptr }
+        }
+    }
+
+    pub fn add_xform_op(&self) {
+
+    }
+}
+
+pub struct Primvar {
+    pub(crate) ptr: *mut ffi::usdGeom_Primvar_t,
+}
+
+impl Primvar {
+    pub fn new(attribute: &Attribute) -> Self {
+        unsafe {
+            let mut ptr = std::ptr::null_mut();
+            ffi::usdGeom_Primvar_new(attribute.ptr, &mut ptr);
+            Self { ptr }
+        }
+    }
+
+    pub fn set_interpolation(&mut self, interpolation: &str) -> bool {
+        let interpolation = tf::Token::new(interpolation);
+        unsafe {
+            let mut result = false;
+            ffi::usdGeom_Primvar_SetInterpolation(self.ptr, interpolation.ptr, &mut result);
+            result
+        }
+    }
+}
+
+pub struct XformCommonAPI {
+    pub(crate) ptr: *mut ffi::usdGeom_XformCommonAPI_t
+}
+
+impl XformCommonAPI {
+    pub fn new(prim: &Prim) -> Self {
+        unsafe {
+            let mut ptr = std::ptr::null_mut();
+            ffi::usdGeom_XformCommonAPI_new(prim.ptr, &mut ptr);
+            Self {
+                ptr
+            }
+        }
+    }
+
+    pub fn set_translation(&self, position: glam::DVec3, timecode: TimeCode) -> bool {
+        unsafe {
+            let mut result = false;
+            ffi::usdGeom_XformCommonAPI_SetTranslate(self.ptr, (&position) as *const glam::DVec3 as _, timecode.0, &mut result);
+            result
+        }
+    }
+
+    pub fn set_scale(&self, scale: glam::Vec3, timecode: TimeCode) -> bool {
+        unsafe {
+            let mut result = false;
+            ffi::usdGeom_XformCommonAPI_SetScale(self.ptr, (&scale) as *const glam::Vec3 as _, timecode.0, &mut result);
+            result
+        }
+    }
+
+    pub fn set_rotate(&self, rot: glam::Vec3, timecode: TimeCode) -> bool {
+        unsafe {
+            let mut result = false;
+            ffi::usdGeom_XformCommonAPI_SetRotate(self.ptr, (&rot) as *const glam::Vec3 as _, ffi::usdGeom_XformCommonAPIRotationOrder_usdGeom_XformCommonAPIRotationOrder_RotationOrderXYZ, timecode.0, &mut result);
+            result
+        }
+    }
+}
+
+pub struct References {
+    pub(crate) ptr: *mut ffi::usd_References_t
+}
+
+impl References {
+    pub fn add_internal_reference(&mut self, path: &sdf::Path) -> bool {
+        unsafe {
+            let mut result = false;
+            ffi::usd_References_AddInternalReference(self.ptr, path.ptr, sdf::LayerOffset::default().ptr, ffi::usd_ListPosition_usd_ListPosition_UsdListPositionBackOfAppendList, &mut result);
+            result
+        }
+    }
+}
+
+pub struct XformOp {
+    pub(crate) ptr: *mut ffi::usdGeom_XformOp_t
+}
+
+impl XformOp {
+    pub fn set(&self, value: &vt::Value, timecode: TimeCode) -> bool {
+        unsafe {
+            let mut result = false;
+            ffi::usdGeom_XformOp_Set(self.ptr, value.ptr, timecode.0, &mut result);
+            result
+        }
+    }
+}
+
+pub struct Xformable {
+    pub(crate) ptr: *mut ffi::usdGeom_Xformable_t
+}
+
+impl Xformable {
+    pub fn new(prim: &Prim) -> Self {
+        unsafe {
+            let mut ptr = std::ptr::null_mut();
+            ffi::usdGeom_Xformable_new(prim.ptr, &mut ptr);
+            Self {
+                ptr
+            }
+        }
+    }
+
+    /*pub fn get_xform_op(&self, ty: ffi::usdGeom_XformOpType) -> XformOp {
+        unsafe {
+            let mut ptr = std::ptr::null_mut();
+            let result = ffi::usdGeom_Xformable_GetXformOp(
+                self.ptr,
+                ty,
+                tf::Token::new("").ptr,
+                false,
+                &mut ptr,
+            );
+            XformOp {
+                ptr
+            }
+
+        }
+    }*/
+
+    pub fn add_xform_op(&self, ty: ffi::usdGeom_XformOpType) -> XformOp {
+        unsafe {
+            let mut ptr = std::ptr::null_mut();
+            let result = ffi::usdGeom_Xformable_AddXformOp(
+                self.ptr,
+                ty,
+                ffi::usdGeom_XformOpPrecision_usdGeom_XformOpPrecision_PrecisionDouble,
+                tf::Token::new("").ptr,
+                false,
+                &mut ptr,
+            );
+            dbg!(result);
+            XformOp {
+                ptr
+            }
+
         }
     }
 }
