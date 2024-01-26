@@ -865,6 +865,14 @@ impl GLEngine {
     }
 }
 
+impl Drop for GLEngine {
+    fn drop(&mut self) {
+        unsafe {
+            ffi::usdImaging_GLEngine_dtor(self.ptr);
+        }
+    }
+}
+
 pub struct GLRenderParams {
     pub(crate) ptr: *mut ffi::usdImaging_GLRenderParams_t
 }
@@ -883,6 +891,14 @@ impl GLRenderParams {
     pub fn set_enable_lighting(&self, enable_lighting: bool) {
         unsafe {
             ffi::usdImaging_GLRenderParams_SetEnableLighting(self.ptr, enable_lighting);
+        }
+    }
+}
+
+impl Drop for GLRenderParams {
+    fn drop(&mut self) {
+        unsafe {
+            ffi::usdImaging_GLRenderParams_dtor(self.ptr);
         }
     }
 }
