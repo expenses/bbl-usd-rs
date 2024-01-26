@@ -730,3 +730,65 @@ impl Default for TimeCode {
         }
     }
 }
+
+pub struct GLEngine {
+    pub(crate) ptr: *mut ffi::usdImaging_GLEngine_t
+}
+
+impl GLEngine {
+    pub fn new() -> Self {
+        unsafe {
+            let mut ptr = std::ptr::null_mut();
+            ffi::usdImaging_GLEngine_new(&mut ptr);
+            Self {
+                ptr
+            }
+        }
+    }
+
+    pub fn set_camera_state(&self, view: glam::DMat4, projection: glam::DMat4) {
+        unsafe {
+            ffi::usdImaging_GLEngine_SetCameraState(self.ptr, &view as *const glam::DMat4 as *const _, &projection as *const glam::DMat4 as *const _);
+        }
+    }
+
+    pub fn set_render_viewport(&self, viewport: glam::DVec4) {
+        unsafe {
+            ffi::usdImaging_GLEngine_SetRenderViewport(self.ptr, &viewport as *const glam::DVec4 as *const _);
+        }
+    }
+
+    pub fn render(&self, prim: &Prim, params: &GLRenderParams) {
+        unsafe {
+            ffi::usdImaging_GLEngine_Render(self.ptr, prim.ptr, params.ptr);
+        }
+    }
+
+    pub fn set_render_setting(&self, id: &tf::Token, value: &vt::Value) {
+        unsafe {
+            ffi::usdImaging_GLEngine_SetRendererSetting(self.ptr as _, id.ptr, value.ptr);
+        }
+    }
+}
+
+pub struct GLRenderParams {
+    pub(crate) ptr: *mut ffi::usdImaging_GLRenderParams_t
+}
+
+impl GLRenderParams {
+    pub fn new() -> Self {
+        unsafe {
+            let mut ptr = std::ptr::null_mut();
+            ffi::usdImaging_GLRenderParams_new(&mut ptr);
+            Self {
+                ptr
+            }
+        }
+    }
+
+    pub fn set_enable_lighting(&self, enable_lighting: bool) {
+        unsafe {
+            ffi::usdImaging_GLRenderParams_SetEnableLighting(self.ptr, enable_lighting);
+        }
+    }
+}
