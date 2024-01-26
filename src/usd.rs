@@ -1119,3 +1119,7 @@ impl Xformable {
         }
     }
 }
+
+pub struct EditTarget {
+    pub(crate) ptr: *mut ffi::usd_EditTarget_t
+}
