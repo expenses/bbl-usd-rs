@@ -153,6 +153,52 @@ impl StageRefPtr {
             }
         }
     }
+
+    pub fn get_root_layer(&self) -> sdf::LayerHandle {
+        unsafe {
+            let mut ptr = std::ptr::null_mut();
+            ffi::usd_StageRefPtr_GetRootLayer(self.ptr, &mut ptr);
+            sdf::LayerHandle {
+                ptr
+            }
+        }
+    }
+
+    pub fn get_session_layer(&self) -> sdf::LayerHandle {
+        unsafe {
+            let mut ptr = std::ptr::null_mut();
+            ffi::usd_StageRefPtr_GetSessionLayer(self.ptr, &mut ptr);
+            sdf::LayerHandle {
+                ptr
+            }
+        }
+    }
+
+    pub fn get_edit_target_for_local_layer(&self, layer: &sdf::LayerHandle) -> EditTarget {
+        unsafe {
+            let mut ptr = std::ptr::null_mut();
+            ffi::usd_StageRefPtr_GetEditTargetForLocalLayer(self.ptr, layer.ptr, &mut ptr);
+            EditTarget {
+                ptr
+            }
+        }
+    }
+
+    pub fn get_edit_target_for_local_layer_with_index(&self, i: usize) -> EditTarget {
+        unsafe {
+            let mut ptr = std::ptr::null_mut();
+            ffi::usd_StageRefPtr_GetEditTargetForLocalLayer_with_index(self.ptr, i, &mut ptr);
+            EditTarget {
+                ptr
+            }
+        }
+    }
+
+    pub fn set_edit_target(&self, edit_target: &EditTarget) {
+        unsafe {
+            ffi::usd_StageRefPtr_SetEditTarget(self.ptr, edit_target.ptr);
+        }
+    }
 }
 
 impl Drop for StageRefPtr {
