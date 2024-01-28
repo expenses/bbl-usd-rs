@@ -278,17 +278,49 @@ impl LayerRefPtr {
             }
         }
     }
+
+    pub fn import_from_str(&self, string: &cpp::String) -> bool {
+        unsafe {
+            let mut result = false;
+            ffi::sdf_LayerRefPtr_ImportFromString(self.ptr, string.ptr, &mut result);
+            result
+        }
+    }
+
+    pub fn insert_sub_layer_path(&self, path: cpp::String, index: i32) {
+        unsafe {
+            ffi::sdf_LayerRefPtr_InsertSubLayerPath(self.ptr, path.ptr, index);
+        }
+        std::mem::forget(path);
+    }
+
+    pub fn export_to_string(&self) -> Option<cpp::String> {
+        unsafe {
+            let mut string = cpp::String::default();
+            let mut result = false;
+            ffi::sdf_LayerRefPtr_ExportToString(self.ptr, &mut string.ptr, &mut result);
+            if result {
+                Some(string)
+            } else {
+                None
+            }
+        }
+    }
 }
+
+unsafe impl Send for LayerRefPtr {}
+unsafe impl Sync for LayerRefPtr {}
 
 pub struct LayerHandle {
     pub(crate) ptr: *mut ffi::sdf_LayerHandle_t
 }
 
 impl LayerHandle {
-    pub fn insert_sub_layer_path(&self, path: &cpp::String, index: i32) {
+    pub fn insert_sub_layer_path(&self, path: cpp::String, index: i32) {
         unsafe {
             ffi::sdf_LayerHandle_InsertSubLayerPath(self.ptr, path.ptr, index);
         }
+        std::mem::forget(path);
     }
 
     pub fn export_to_string(&self) -> Option<cpp::String> {
@@ -304,3 +336,6 @@ impl LayerHandle {
         }
     }
 }
+
+unsafe impl Send for LayerHandle {}
+unsafe impl Sync for LayerHandle {}

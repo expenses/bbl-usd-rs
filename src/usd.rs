@@ -210,6 +210,7 @@ impl Drop for StageRefPtr {
 }
 
 unsafe impl Send for StageRefPtr {}
+unsafe impl Sync for StageRefPtr {}
 
 pub trait Object {
     fn _object_ptr(&self) -> *mut ffi::usd_Object_t;
@@ -287,6 +288,9 @@ impl Prim {
         self.ptr
     }
 }
+
+unsafe impl Send for Prim {}
+unsafe impl Sync for Prim {}
 
 impl Object for Prim {
     fn _object_ptr(&self) -> *mut ffi::usd_Object_t {
@@ -1040,6 +1044,9 @@ impl XformCommonAPI {
     }
 }
 
+unsafe impl Send for XformCommonAPI {}
+unsafe impl Sync for XformCommonAPI {}
+
 pub struct References {
     pub(crate) ptr: *mut ffi::usd_References_t
 }
@@ -1122,4 +1129,17 @@ impl Xformable {
 
 pub struct EditTarget {
     pub(crate) ptr: *mut ffi::usd_EditTarget_t
+}
+
+impl EditTarget {
+    pub fn new_from_layer_ref_ptr(layer: &sdf::LayerRefPtr) -> Self {
+        let layer_offset = sdf::LayerOffset::default();
+        unsafe {
+            let mut ptr = std::ptr::null_mut();
+            ffi::usd_EditTarget_from_layer_ref_ptr(layer.ptr, layer_offset.ptr, &mut ptr);
+            Self {
+                ptr
+            }
+        }
+    }
 }

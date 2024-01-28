@@ -48,6 +48,9 @@ impl Drop for String {
     }
 }
 
+unsafe impl Send for String {}
+unsafe impl Sync for String {}
+
 pub struct StringRef {
     pub(crate) ptr: *mut ffi::std_String_t,
 }
