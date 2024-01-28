@@ -45,8 +45,7 @@ impl Stage {
             let mut ptr = std::ptr::null_mut();
             let initial_load_set = ffi::usd_StageInitialLoadSet_usd_StageInitialLoadSet_LoadAll;
             let filename = filename.as_ref().to_string_lossy().to_string();
-            let c_filename = CString::new(filename.clone()).unwrap();
-            let cpp_filename = cpp::String::new(&c_filename);
+            let cpp_filename = cpp::String::new(&filename);
             ffi::usd_Stage_CreateNew(
                 cpp_filename.ptr,
                 initial_load_set,

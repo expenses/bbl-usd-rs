@@ -238,8 +238,7 @@ pub struct Layer;
 
 impl Layer {
     pub fn create_anonymous(tag: &str) -> LayerRefPtr {
-        let tag = std::ffi::CString::new(tag).unwrap();
-        let tag = cpp::String::new(&tag);
+        let tag = cpp::String::new(tag);
         let arguments = FileFormatArguments::default();
         unsafe {
             let mut ptr = std::ptr::null_mut();
@@ -251,8 +250,7 @@ impl Layer {
     }
 
     pub fn find_or_open(identifier: &str) -> LayerRefPtr {
-        let identifier = std::ffi::CString::new(identifier).unwrap();
-        let identifier = cpp::String::new(&identifier);
+        let identifier = cpp::String::new(identifier);
         let arguments = FileFormatArguments::default();
         unsafe {
             let mut ptr = std::ptr::null_mut();
