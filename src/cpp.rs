@@ -10,13 +10,13 @@ impl String {
         let bytes = string.as_bytes();
         let mut cpp_string = Self::default();
         cpp_string.resize(bytes.len());
-        cpp_string.as_slice_mut().copy_from_slice(bytes);
+        cpp_string.as_bytes_mut().copy_from_slice(bytes);
         cpp_string
     }
 
     pub fn resize(&mut self, new_len: usize) {
         unsafe {
-            ffi::std_String_resize(self.ptr, new_len as u64);
+            ffi::std_String_resize(self.ptr, new_len as _);
         }
     }
 
@@ -32,7 +32,7 @@ impl String {
         len as usize
     }
 
-    pub fn as_slice<'a>(&'a self) -> &'a [u8] {
+    pub fn as_bytes<'a>(&'a self) -> &'a [u8] {
         unsafe {
             let mut ptr = std::ptr::null();
             ffi::std_String_data_const(self.ptr, &mut ptr);
@@ -41,10 +41,10 @@ impl String {
     }
 
     pub fn as_str<'a>(&'a self) -> &'a str {
-        std::str::from_utf8(self.as_slice()).expect("invalid")
+        std::str::from_utf8(self.as_bytes()).expect("invalid")
     }
 
-    pub fn as_slice_mut<'a>(&'a mut self) -> &'a mut [u8] {
+    pub fn as_bytes_mut<'a>(&'a mut self) -> &'a mut [u8] {
         unsafe {
             let mut ptr = std::ptr::null_mut();
             ffi::std_String_data(self.ptr, &mut ptr);
@@ -53,9 +53,29 @@ impl String {
     }
 
     pub fn as_str_mut<'a>(&'a mut self) -> &'a mut str {
-        std::str::from_utf8_mut(self.as_slice_mut()).expect("invalid")
+        std::str::from_utf8_mut(self.as_bytes_mut()).expect("invalid")
     }
 }
+
+impl Clone for String {
+    fn clone(&self) -> Self {
+        unsafe {
+            let mut ptr = std::ptr::null_mut();
+            ffi::std_String_from_string(self.ptr, &mut ptr);
+            Self {
+                ptr
+            }
+        }
+    }
+}
+
+impl PartialEq for String {
+    fn eq(&self, other: &Self) -> bool {
+        self.as_bytes() == other.as_bytes()
+    }
+}
+
+impl Eq for String {}
 
 impl Default for String {
     fn default() -> Self {

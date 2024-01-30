@@ -952,6 +952,12 @@ impl GLRenderParams {
             ffi::usdImaging_GLRenderParams_SetEnableLighting(self.ptr, enable_lighting);
         }
     }
+
+    pub fn set_cull_style(&self, cull_style: ffi::usdImaging_GLCullStyle) {
+        unsafe {
+            ffi::usdImaging_GLRenderParams_SetCullStyle(self.ptr, cull_style as _);
+        }
+    }
 }
 
 impl Drop for GLRenderParams {
@@ -1058,6 +1064,14 @@ impl References {
             result
         }
     }
+
+    pub fn add_reference(&mut self, identifier: &cpp::String) -> bool {
+        unsafe {
+            let mut result = false;
+            ffi::usd_References_AddReference_with_identifier(self.ptr, identifier.ptr, sdf::LayerOffset::default().ptr, ffi::usd_ListPosition_usd_ListPosition_UsdListPositionBackOfAppendList, &mut result);
+            result
+        }
+    }
 }
 
 pub struct XformOp {
@@ -1117,7 +1131,6 @@ impl Xformable {
                 false,
                 &mut ptr,
             );
-            dbg!(result);
             XformOp {
                 ptr
             }
@@ -1139,6 +1152,14 @@ impl EditTarget {
             Self {
                 ptr
             }
+        }
+    }
+}
+
+impl Drop for EditTarget {
+    fn drop(&mut self) {
+        unsafe {
+            ffi::usd_EditTarget_dtor(self.ptr);
         }
     }
 }
