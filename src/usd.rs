@@ -914,6 +914,14 @@ impl GLEngine {
         }
     }
 
+    pub fn set_renderer_aov(&self, aov: &tf::Token) -> bool {
+        unsafe {
+            let mut result = false;
+            ffi::usdImaging_GLEngine_SetRendererAov(self.ptr, aov.ptr, &mut result);
+            result
+        }
+    }
+
     pub fn set_camera_state(&self, view: glam::DMat4, projection: glam::DMat4) {
         unsafe {
             ffi::usdImaging_GLEngine_SetCameraState(self.ptr, &view as *const glam::DMat4 as *const _, &projection as *const glam::DMat4 as *const _);
