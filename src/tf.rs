@@ -100,7 +100,7 @@ pub struct Type {
 
 impl Type {
     pub fn declare(name: &str) -> Self {
-        let string = cpp::String::new(&CString::new(name).unwrap());
+        let string = cpp::String::new(name);
 
         unsafe {
             let mut ptr = std::ptr::null();
