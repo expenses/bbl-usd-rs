@@ -68,3 +68,106 @@ impl AsRef<str> for TokenRef {
         self.text()
     }
 }
+
+type OpenAssetFn = extern "C" fn(*const ffi::ar_ResolvedPath_t, *mut *mut ffi::ar_AssetSharedPtr_t);
+
+type ResolveFn = extern "C" fn(*const ffi::std_String_t, *mut *mut ffi::ar_ResolvedPath_t);
+
+type CreateIdentifierFn = extern "C" fn(
+    *const ffi::std_String_t,
+    *const ffi::ar_ResolvedPath_t,
+    *mut *mut ffi::std_String_t,
+);
+
+type GetExtensionFn = extern "C" fn(*const ffi::std_String_t, *mut *mut ffi::std_String_t);
+
+type GetModificationTimestampFn = extern "C" fn(
+    *const ffi::std_String_t,
+    *const ffi::ar_ResolvedPath_t,
+    *mut *mut ffi::ar_Timestamp_t,
+);
+
+type CloseWritableAssetFn = extern "C" fn(*mut c_void) -> bool;
+
+type OpenWritableAssetFn =
+    extern "C" fn(*const ffi::ar_ResolvedPath_t, ffi::ar_ResolvedWriteMode) -> *mut c_void;
+
+type WriteWritableAssetFn = extern "C" fn(*mut c_void, *const c_void, usize, usize) -> usize;
+
+pub struct Type {
+    pub(crate) ptr: *const ffi::tf_Type_t,
+}
+
+impl Type {
+    pub fn declare(name: &str) -> Self {
+        let string = cpp::String::new(&CString::new(name).unwrap());
+
+        unsafe {
+            let mut ptr = std::ptr::null();
+
+            ffi::tf_Type_Declare(string.ptr, &mut ptr);
+            Self { ptr }
+        }
+    }
+
+    pub fn set_factory(
+        &self,
+        create_identifier_for_new_asset: Option<CreateIdentifierFn>,
+        create_identifier: Option<CreateIdentifierFn>,
+        open_asset: Option<OpenAssetFn>,
+        resolve_for_new_asset: Option<ResolveFn>,
+        resolve: Option<ResolveFn>,
+        get_extension: Option<GetExtensionFn>,
+        get_timestamp: Option<GetModificationTimestampFn>,
+        close_writable_asset: Option<CloseWritableAssetFn>,
+        open_writable_asset: Option<OpenWritableAssetFn>,
+        write_writable_asset: Option<WriteWritableAssetFn>,
+    ) {
+        unsafe {
+            ffi::ar_set_ar_resolver_factory(
+                self.ptr,
+                match create_identifier_for_new_asset {
+                    Some(ptr) => ptr as _,
+                    None => std::ptr::null_mut(),
+                },
+                match create_identifier {
+                    Some(ptr) => ptr as _,
+                    None => std::ptr::null_mut(),
+                },
+                match open_asset {
+                    Some(ptr) => ptr as _,
+                    None => std::ptr::null_mut(),
+                },
+                match resolve {
+                    Some(ptr) => ptr as _,
+                    None => std::ptr::null_mut(),
+                },
+                match resolve_for_new_asset {
+                    Some(ptr) => ptr as _,
+                    None => std::ptr::null_mut(),
+                },
+                std::ptr::null_mut(),
+                match get_extension {
+                    Some(ptr) => ptr as _,
+                    None => std::ptr::null_mut(),
+                },
+                match get_timestamp {
+                    Some(ptr) => ptr as _,
+                    None => std::ptr::null_mut(),
+                },
+                match close_writable_asset {
+                    Some(ptr) => ptr as _,
+                    None => std::ptr::null_mut(),
+                },
+                match open_writable_asset {
+                    Some(ptr) => ptr as _,
+                    None => std::ptr::null_mut(),
+                },
+                match write_writable_asset {
+                    Some(ptr) => ptr as _,
+                    None => std::ptr::null_mut(),
+                },
+            );
+        }
+    }
+}
