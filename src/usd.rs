@@ -153,6 +153,21 @@ impl StageRefPtr {
         }
     }
 
+    pub fn export(&self, filename: &cpp::String) -> bool {
+        unsafe {
+            let mut result = false;
+            let file_format_arguments = sdf::FileFormatArguments::default();
+            ffi::usd_StageRefPtr_Export(
+                self.ptr,
+                filename.ptr,
+                false,
+                file_format_arguments.ptr,
+                &mut result
+            );
+            result
+        }
+    }
+
     pub fn get_root_layer(&self) -> sdf::LayerHandle {
         unsafe {
             let mut ptr = std::ptr::null_mut();

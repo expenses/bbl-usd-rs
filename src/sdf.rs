@@ -222,7 +222,7 @@ pub struct FileFormatArguments {
     pub(crate) ptr: *mut ffi::sdf_FileFormatFileFormatArguments_t
 }
 
-impl FileFormatArguments {
+impl Default for FileFormatArguments {
     fn default() -> Self {
         unsafe {
             let mut ptr = std::ptr::null_mut();
