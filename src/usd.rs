@@ -981,6 +981,12 @@ impl GLRenderParams {
             ffi::usdImaging_GLRenderParams_SetCullStyle(self.ptr, cull_style as _);
         }
     }
+
+    pub fn set_color_correction_mode(&self, mode: &tf::Token) {
+        unsafe {
+            ffi::usdImaging_GLRenderParams_SetColorCorrectionMode(self.ptr, mode.ptr);
+        }
+    }
 }
 
 impl Drop for GLRenderParams {
