@@ -899,54 +899,6 @@ impl Default for TimeCode {
     }
 }
 
-pub struct GLEngine {
-    pub(crate) ptr: *mut ffi::usdImaging_GLEngine_t
-}
-
-impl GLEngine {
-    pub fn new() -> Self {
-        unsafe {
-            let mut ptr = std::ptr::null_mut();
-            ffi::usdImaging_GLEngine_new(&mut ptr);
-            Self {
-                ptr
-            }
-        }
-    }
-
-    pub fn set_renderer_aov(&self, aov: &tf::Token) -> bool {
-        unsafe {
-            let mut result = false;
-            ffi::usdImaging_GLEngine_SetRendererAov(self.ptr, aov.ptr, &mut result);
-            result
-        }
-    }
-
-    pub fn set_camera_state(&self, view: glam::DMat4, projection: glam::DMat4) {
-        unsafe {
-            ffi::usdImaging_GLEngine_SetCameraState(self.ptr, &view as *const glam::DMat4 as *const _, &projection as *const glam::DMat4 as *const _);
-        }
-    }
-
-    pub fn set_render_viewport(&self, viewport: glam::DVec4) {
-        unsafe {
-            ffi::usdImaging_GLEngine_SetRenderViewport(self.ptr, &viewport as *const glam::DVec4 as *const _);
-        }
-    }
-
-    pub fn render(&self, prim: &Prim, params: &GLRenderParams) {
-        unsafe {
-            ffi::usdImaging_GLEngine_Render(self.ptr, prim.ptr, params.ptr);
-        }
-    }
-
-    pub fn set_render_setting(&self, id: &tf::Token, value: &vt::Value) {
-        unsafe {
-            ffi::usdImaging_GLEngine_SetRendererSetting(self.ptr as _, id.ptr, value.ptr);
-        }
-    }
-}
-
 impl Drop for GLEngine {
     fn drop(&mut self) {
         unsafe {
@@ -1189,6 +1141,181 @@ impl Drop for EditTarget {
     fn drop(&mut self) {
         unsafe {
             ffi::usd_EditTarget_dtor(self.ptr);
+        }
+    }
+}
+
+pub struct HgiTextureHandle {
+    pub ptr: *mut ffi::usdImaging_HgiTextureHandle_t
+}
+
+impl HgiTextureHandle {
+    pub fn get_vulkan_texture(&self) -> HgiVulkanTexture {
+        unsafe {
+            let mut ptr = std::ptr::null_mut();
+            ffi::usdImaging_get_vulkan_texture(
+                self.ptr,
+                &mut ptr,
+            );
+            debug_assert_ne!(ptr, std::ptr::null_mut());
+            HgiVulkanTexture {
+                ptr
+            }
+        }
+    }
+}
+
+pub struct HgiVulkanTexture {
+    pub ptr: *mut ffi::usdImaging_HgiVulkanTexture_t
+}
+
+impl HgiVulkanTexture {
+    pub fn get_image(&self) -> u64 {
+        unsafe {
+            let mut address = 0;
+            ffi::usdImaging_HgiVulkanTexture_GetImage(
+                self.ptr,
+                &mut address,
+            );
+            address
+        }
+    }
+}
+
+pub struct HgiVulkan {
+    pub(crate) ptr: *mut ffi::usdImaging_HgiVulkan_t
+}
+
+impl HgiVulkan {
+    pub fn new() -> Self {
+        unsafe {
+            let mut ptr = std::ptr::null_mut();
+            ffi::usdImaging_HgiVulkan_new(&mut ptr);
+            Self {
+                ptr
+            }
+        }
+    }
+
+    pub fn get_vulkan_instance(&self) -> HgiVulkanInstance {
+        unsafe {
+            let mut ptr = std::ptr::null_mut();
+            ffi::usdImaging_HgiVulkan_GetVulkanInstance(self.ptr, &mut ptr);
+            HgiVulkanInstance {
+                ptr
+            }
+        }
+    }
+
+    pub fn get_primary_device(&self) -> HgiVulkanDevice {
+        unsafe {
+            let mut ptr = std::ptr::null_mut();
+            ffi::usdImaging_HgiVulkan_GetPrimaryDevice(self.ptr, &mut ptr);
+            HgiVulkanDevice {
+                ptr
+            }
+        }
+    }
+}
+
+pub struct HgiVulkanInstance {
+    pub(crate) ptr: *mut ffi::usdImaging_HgiVulkanInstance_t
+}
+ 
+impl HgiVulkanInstance {
+    pub fn get_vulkan_instance(&self) -> u64 {
+        unsafe {
+            let mut address = 0;
+            ffi::usdImaging_HgiVulkanInstance_GetVulkanInstance(self.ptr, &mut address);
+            address
+        }
+    }
+}
+
+pub struct HgiVulkanDevice {
+    pub(crate) ptr: *mut ffi::usdImaging_HgiVulkanDevice_t
+}
+ 
+impl HgiVulkanDevice {
+    pub fn get_vulkan_device(&self) -> u64 {
+        unsafe {
+            let mut address = 0;
+            ffi::usdImaging_HgiVulkanDevice_GetVulkanDevice(self.ptr, &mut address);
+            address
+        }
+    }
+
+    pub fn get_vulkan_physical_device(&self) -> u64 {
+        unsafe {
+            let mut address = 0;
+            ffi::usdImaging_HgiVulkanDevice_GetVulkanPhysicalDevice(self.ptr, &mut address);
+            address
+        }
+    }
+}
+
+
+pub struct GLEngine {
+    pub(crate) ptr: *mut ffi::usdImaging_GLEngine_t
+}
+
+impl GLEngine {
+    pub fn new(vulkan: &HgiVulkan) -> Self {
+        unsafe {
+            let mut ptr = std::ptr::null_mut();
+            ffi::usdImaging_GLEngine_from_vulkan(vulkan.ptr, &mut ptr);
+            Self {
+                ptr
+            }
+        }
+    }
+
+    pub fn set_renderer_aov(&self, aov: &tf::Token) -> bool {
+        unsafe {
+            let mut result = false;
+            ffi::usdImaging_GLEngine_SetRendererAov(self.ptr, aov.ptr, &mut result);
+            result
+        }
+    }
+
+    pub fn set_camera_state(&self, view: glam::DMat4, projection: glam::DMat4) {
+        unsafe {
+            ffi::usdImaging_GLEngine_SetCameraState(self.ptr, &view as *const glam::DMat4 as *const _, &projection as *const glam::DMat4 as *const _);
+        }
+    }
+
+    pub fn set_render_viewport(&self, viewport: glam::DVec4) {
+        unsafe {
+            ffi::usdImaging_GLEngine_SetRenderViewport(self.ptr, &viewport as *const glam::DVec4 as *const _);
+        }
+    }
+
+    pub fn render(&self, prim: &Prim, params: &GLRenderParams) {
+        unsafe {
+            ffi::usdImaging_GLEngine_Render(self.ptr, prim.ptr, params.ptr);
+        }
+    }
+
+    pub fn set_render_setting(&self, id: &tf::Token, value: &vt::Value) {
+        unsafe {
+            ffi::usdImaging_GLEngine_SetRendererSetting(self.ptr as _, id.ptr, value.ptr);
+        }
+    }
+
+    pub fn set_enable_presentation(&self, enabled: bool) {
+        unsafe {
+            ffi::usdImaging_GLEngine_SetEnablePresentation(self.ptr, enabled);
+        }
+    }
+    
+    
+    pub fn get_aov_texture(&self, aov: &tf::Token) -> HgiTextureHandle {
+        unsafe {
+            let mut ptr = std::ptr::null_mut();
+            ffi::usdImaging_GLEngine_GetAovTexture(self.ptr, aov.ptr, &mut ptr);
+            HgiTextureHandle {
+                ptr
+            }
         }
     }
 }

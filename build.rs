@@ -3,6 +3,7 @@ use std::path::PathBuf;
 
 pub fn main() {
     let _dst = Config::new("openusd", "bbl-usd")
+        .define("VULKAN_SDK", std::env::var("VULKAN_SDK").unwrap())
         .define("BBL_LANGUAGES", "rust")
         .build();
 
