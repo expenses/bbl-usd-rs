@@ -2,7 +2,7 @@ use std::path::PathBuf;
 
 pub fn main() {
     let var = |name| {
-        std::env::var(name).unwrap()
+        std::env::var(name).expect(name)
     };
 
     let dst = cmake::Config::new("bbl-usd")
